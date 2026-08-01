@@ -1,5 +1,9 @@
-venv/
+env/
 venv311/
 captured_scene.jpg
 __pycache__/
 .vscode/
+*.pt
+*.exe
+*.wav
+gpu_info.txt
