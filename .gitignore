@@ -1,0 +1,5 @@
+venv/
+venv311/
+captured_scene.jpg
+__pycache__/
+.vscode/
