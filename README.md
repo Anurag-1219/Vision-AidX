@@ -1,93 +1,108 @@
-# VisionAid X — Spatial AI Voice Assistant for Visually Impaired 👁️⚡
+﻿# VisionAid X — Spatial AI Voice Assistant for Visually Impaired
 
-VisionAid X is a multimodal, voice-driven assistive system for visually
-impaired users. It combines real-time camera input, speech recognition,
-a local Vision-Language Model, and text-to-speech to describe
+VisionAid X is a multimodal assistive system for visually impaired users.
+It uses a camera feed, a local YOLOv8 object detector, a local
+Vision-Language Model (via Ollama), and text-to-speech to describe
 surroundings, read text aloud, warn about nearby hazards, and recall
-where objects were last seen — running on a laptop with no ongoing
-cloud costs.
+where objects were last seen.
 
-## 🌟 Key Features
+The project has two interfaces built on the same core AI logic:
+1. Web Interface (current, primary) - a React web app + FastAPI
+   backend, controlled via on-screen buttons
+2. Voice Interface (earlier prototype) - a terminal app controlled
+   entirely by spoken commands (English + Hindi)
 
-- **🎙️ Voice-Driven Interface** — hands-free operation via live speech
-  recognition (English + Hindi trigger words) and spoken responses
-- **👁️ Local Scene Description (VLM)** — powered by `minicpm-v` running
-  locally via [Ollama](https://ollama.com), no cloud vision API needed
-- **📦 Object Detection + Spatial Awareness** — YOLOv8 detects objects
+## Key Features
+
+- Object Detection + Spatial Awareness - YOLOv8 detects objects
   and reports their position (left/right/front) and relative distance
-- **⚠️ Safety Alerts** — rule-based risk classifier escalates warnings
+- Safety Alerts - rule-based risk classifier escalates warnings
   for nearby hazards (vehicles, obstacles, furniture)
-- **📖 Text Reading (OCR)** — reads signs, labels, and printed text
+- Text Reading (OCR) - reads signs, labels, and printed text
   aloud via EasyOCR
-- **🧠 Session Memory** — recall where an object was last seen
-  ("where is my phone?")
+- Scene Description (VLM) - natural-language description of
+  the surroundings via a local vision-language model (Ollama)
+- Session Memory - recall where an object was last seen
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Component | Technology |
 |---|---|
+| Backend Framework | FastAPI + Uvicorn |
+| Frontend | React + Vite + TypeScript |
 | Object Detection | YOLOv8 (Ultralytics) |
-| Scene Description (VLM) | Ollama + minicpm-v |
+| Scene Description (VLM) | Ollama + moondream |
 | OCR (Text Reading) | EasyOCR |
-| Speech Recognition | SpeechRecognition + Google STT |
-| Text-to-Speech | gTTS + pygame |
+| Text-to-Speech (Web) | Browser Web Speech API |
 | Computer Vision | OpenCV |
 | Language | Python 3.11 |
 
-## 🚀 Getting Started
+## Getting Started - Web Interface (current version)
 
 ### 1. Prerequisites
-- Python 3.11 (newer versions may not yet support all dependencies —
-  see Known Issues below)
-- [Ollama](https://ollama.com) installed
+- Python 3.11
+- Node.js + npm
+- Ollama installed, with a vision model pulled:
+  ollama pull moondream
 
-### 2. Set up environment
-```bash
+### 2. Set up Python environment
 python -m venv venv311
-venv311\Scripts\activate      # Windows
+venv311\Scripts\activate
 pip install -r requirements.txt
-```
+pip install fastapi uvicorn ollama
 
-### 3. Pull the local vision model
-```bash
-ollama pull minicpm-v
-```
+### 3. Start the backend (Terminal 1)
+uvicorn main_v3:app --host 127.0.0.1 --port 8080 --reload
+Wait for "Application startup complete." - keep this terminal running.
 
-### 4. Run
-```bash
-python main_v3.py
-```
+### 4. Start the frontend (Terminal 2 - new window)
+npm install
+npm run dev
+Open the printed URL (e.g. http://localhost:5173) in your browser.
 
-### Voice commands
-| Say | Triggers |
-|---|---|
-| "detect", "object", "kya hai" | Object + spatial + safety scan |
-| "read", "text", "padho" | Reads visible text aloud |
-| "describe", "what", "samne" | Scene description via VLM |
-| "where is my [item]", "kahan hai" | Recall last-seen location |
-| "stop", "exit", "quit" | Shuts down |
+### 5. Use it
+Click any of the four buttons on the page:
+- Detect Objects & Safety - scans surroundings, reports hazards
+- Read Text / OCR - reads any visible text aloud
+- Describe Scene - full natural-language scene description
+- Find My Item - recalls last-seen location of an object
 
-## 📋 Project Structure
+## How it works (architecture)
 
-- `main_v3.py` — main integrated application (current working version)
-- `test_ocr.py` — standalone OCR test/demo script
-- `main.py` — Phase 1 prototype (object detection + speech only)
+Browser (React, port 5173)
+   sends a GET request when a button is clicked
+FastAPI backend (main_v3.py, port 8080)
+   opens the webcam directly via OpenCV
+   runs YOLOv8 / EasyOCR / Ollama depending on the button
+   sends back JSON { "text": "..." }
+Browser speaks the result aloud (Web Speech API)
 
-## ⚠️ Known Issues / Limitations
+Note: the backend, not the browser, controls the camera directly.
+This avoids a Windows limitation where two programs cannot both
+hold the webcam open at the same time.
 
-- **GPU acceleration**: CUDA support is currently unreliable on some
-  NVIDIA laptop GPUs (tested: RTX 2050) — driver-related. Runs
-  correctly on CPU, just slower for the VLM module.
-- **VLM response time**: scene description can take 10–30+ seconds on
-  CPU. Avoid firing repeated "describe" requests back-to-back — let
-  each finish before the next.
-- **Speech recognition accuracy**: occasional mishearing of similar-
-  sounding words (e.g. "person" → "present") — a known limitation of
-  cloud speech recognition over a laptop mic.
+## Known Issues / Limitations
 
-## 🔭 Future Scope
+- GPU acceleration is currently unreliable on some NVIDIA laptop GPUs
+  (tested: RTX 2050) - driver-related. Runs correctly on CPU, just
+  slower for the VLM (Describe Scene) module.
+- VLM response time can take 10-30+ seconds on CPU. Avoid clicking
+  "Describe Scene" repeatedly back-to-back.
+- Port 8000 was unusable on the development machine (WinError 10013 -
+  reserved by the OS); the project runs on port 8080 instead.
+- Web Speech API voice quality varies by browser/OS.
+
+## Project Structure
+
+- main_v3.py - FastAPI backend for the web interface (current)
+- src/App.tsx - React frontend
+- main.py - Phase 1 prototype (object detection + speech, standalone)
+- test_ocr.py - standalone OCR test/demo script
+
+## Future Scope
 
 - Full SLAM / 3D spatial mapping
 - Persistent (vector database) long-term memory
 - Edge deployment (Jetson / Raspberry Pi)
 - SOS / emergency contact integration
+- Restore/merge the voice-command interface alongside the web UI
